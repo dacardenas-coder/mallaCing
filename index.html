@@ -39,12 +39,29 @@
     display: flex; align-items: center; justify-content: space-between;
     color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     position: sticky; left: 0; z-index: 1000;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-title {
+    font-family: 'Space Mono'; 
+    font-weight: bold; 
+    font-size: 18px;
+  }
+  .header-title span { color: var(--um-gold); }
+
+  .header-buttons {
+    display: flex; 
+    gap: 10px; 
+    align-items: center;
+    flex-wrap: wrap;
   }
 
   .btn-resumen {
     background: var(--um-gold); color: var(--um-blue);
     border: none; padding: 8px 18px; border-radius: 5px;
     font-weight: bold; cursor: pointer; font-family: 'Space Mono';
+    font-size: 12px;
   }
 
   .filter-bar {
@@ -84,13 +101,11 @@
   }
   .sem-header span { font-size: 10px; color: var(--um-gold); font-family: 'Space Mono'; margin-top: 5px; }
 
-  /* Estilos para el efecto acordeón */
   .component-label, .semester-cell {
     transition: all 0.3s ease;
     overflow: hidden;
   }
 
-  /* Ocultar por defecto para el efecto acordeón */
   .hidden-row {
     display: none !important;
   }
@@ -144,21 +159,73 @@
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { background: var(--um-blue); color: white; padding: 10px; text-align: left; }
   td { padding: 10px; border-bottom: 1px solid #eee; }
+
+  .btn-pdf {
+    background: #dc2626; color: #fff;
+    border: none; padding: 8px 18px; border-radius: 5px;
+    font-weight: bold; cursor: pointer; font-family: 'Space Mono';
+    transition: all 0.2s;
+    font-size: 12px;
+  }
+  .btn-pdf:hover { background: #b91c1c; }
+
+  .btn-clear {
+    background: #6b7280; color: #fff;
+    border: none; padding: 8px 18px; border-radius: 5px;
+    font-weight: bold; cursor: pointer; font-family: 'Space Mono';
+    transition: all 0.2s;
+    font-size: 12px;
+  }
+  .btn-clear:hover { background: #4b5563; }
+
+  #json-status {
+    display: none;
+    padding: 6px 20px;
+    font-family: 'Space Mono'; font-size: 11px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; left: 0; z-index: 998;
+  }
+  #json-status.ok  { background: #d1fae5; color: #065f46; }
+  #json-status.err { background: #fee2e2; color: #991b1b; }
+  #json-status.info { background: #dbeafe; color: #1e40af; }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    padding: 60px 20px;
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 20px; }
+  .empty-state .sub { font-size: 14px; color: #999; margin-top: 10px; }
+
+  @media (max-width: 768px) {
+    header { flex-direction: column; align-items: stretch; }
+    .header-title { font-size: 14px; text-align: center; }
+    .header-buttons { justify-content: center; }
+    .main-scroll { padding: 20px; }
+    .modal { width: 95%; padding: 20px; }
+  }
 </style>
 </head>
 <body>
 
 <header>
-  <div style="font-family: 'Space Mono'; font-weight: bold; font-size: 18px;">PROGRAMA INGENIERÍA DE SISTEMAS U. MARIANA <span style="color:var(--um-gold)">| PROPUESTA MALLA CURRICULAR</span></div>
-  <button class="btn-resumen" onclick="showResumen()">RESUMEN TOTAL</button>
+  <div class="header-title">PROGRAMA INGENIERÍA DE SISTEMAS U. MARIANA <span>| PROPUESTA MALLA CURRICULAR</span></div>
+  <div class="header-buttons">
+    <button class="btn-resumen" onclick="showResumen()">📊 RESUMEN TOTAL</button>
+    <button class="btn-pdf" onclick="generatePDF()">📥 GENERAR PDF</button>
+    <button class="btn-clear" onclick="clearData()">🗑️ LIMPIAR DATOS</button>
+  </div>
 </header>
+<div id="json-status"></div>
 
 <div class="filter-bar">
   <button class="btn-filter active" style="background:#ddd" onclick="filterByArea('all', this)">TODOS</button>
-  <button class="btn-filter" style="background:#d1e3fa" onclick="filterByArea('Area Basica de Ingeniería', this)">BÁSICA</button>
-  <button class="btn-filter" style="background:#d1e3fa" onclick="filterByArea('Area General de Ingeniería', this)">GENERAL</button>
-  <button class="btn-filter" style="background:#d1fae5" onclick="filterByArea('Area Especifica', this)">ESPECÍFICA</button>
-  <button class="btn-filter" style="background:#fef3c7" onclick="filterByArea('Area Institucional', this)">INSTITUCIONAL</button>
+  <button class="btn-filter" style="background:#d1e3fa" onclick="filterByArea('Área Básica de Ingeniería', this)">BÁSICA</button>
+  <button class="btn-filter" style="background:#d1e3fa" onclick="filterByArea('Área General de Ingeniería', this)">GENERAL</button>
+  <button class="btn-filter" style="background:#d1fae5" onclick="filterByArea('Área Específica', this)">ESPECÍFICA</button>
+  <button class="btn-filter" style="background:#fef3c7" onclick="filterByArea('Área Institucional', this)">INSTITUCIONAL</button>
   <button class="btn-filter" style="background:#f3f4f6" onclick="filterByArea('Electivas', this)">ELECTIVAS</button>
 </div>
 
@@ -176,18 +243,24 @@
 </div>
 
 <script>
-const RAW = [{
+// ============================================================
+// 1. VARIABLES GLOBALES
+// ============================================================
+// ============================================================
+// DATOS INCRUSTADOS EN EL CÓDIGO FUENTE (sin necesidad de cargar archivo)
+// ============================================================
+const EMBEDDED_DATA = [{
     "semestre": 1,
     "cursos.id": "B01",
     "cursos.nombre": "Matemáticas aplicadas I",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "1. MATEMATICAS",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -200,7 +273,7 @@ const RAW = [{
     "cursos.nombre": "Matemáticas discretas",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "1. MATEMATICAS",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
@@ -215,13 +288,13 @@ const RAW = [{
   {
     "semestre": 1,
     "cursos.id": "B03",
-    "cursos.nombre": "Introducción a la Ingenieria de Sistemas",
+    "cursos.nombre": "Introducción a la Ingeniería de Sistemas",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "INGENIERÍA DE SOFTWARE",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -236,12 +309,12 @@ const RAW = [{
     "cursos.nombre": "Fundamentos de Desarrollo de Software",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "1. INGENIERÍA DE SOFTWARE",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -252,15 +325,15 @@ const RAW = [{
     "semestre": 1,
     "cursos.id": "INS01",
     "cursos.nombre": "Pensamiento Filosófico",
-    "cursos.creditos": 1,
+    "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Institucional",
+    "cursos.área": "Área Institucional",
     "Componete": "FORMACION HUMANO-CRISTIANA",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAPIns",
-    "Horas de interacción con el docente": 16,
-    "Horas de trabajo Independiente": 32,
-    "Horas de trabajo totales": 48,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 32,
+    "Horas de trabajo Independiente": 64,
+    "Horas de trabajo totales": 96,
     "Obligatorio": "O",
     "Electivo": "",
     "Teórico": "T",
@@ -270,15 +343,15 @@ const RAW = [{
     "semestre": 1,
     "cursos.id": "INS02",
     "cursos.nombre": "Desarrollo Humano",
-    "cursos.creditos": 1,
+    "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Institucional",
+    "cursos.área": "Área Institucional",
     "Componete": "FORMACION HUMANO-CRISTIANA",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAPIns",
-    "Horas de interacción con el docente": 16,
-    "Horas de trabajo Independiente": 32,
-    "Horas de trabajo totales": 48,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 32,
+    "Horas de trabajo Independiente": 64,
+    "Horas de trabajo totales": 96,
     "Obligatorio": "O",
     "Electivo": "",
     "Teórico": "T",
@@ -293,7 +366,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -311,7 +384,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -326,12 +399,12 @@ const RAW = [{
     "cursos.nombre": "Matemáticas aplicadas II",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "B01",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "1. MATEMATICAS",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -341,10 +414,10 @@ const RAW = [{
   {
     "semestre": 2,
     "cursos.id": "B05",
-    "cursos.nombre": "Álgebral Lineal",
+    "cursos.nombre": "Álgebra Lineal",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "1. MATEMATICAS",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
@@ -359,15 +432,15 @@ const RAW = [{
   {
     "semestre": 2,
     "cursos.id": "B06",
-    "cursos.nombre": "2. Física aplicada I",
+    "cursos.nombre": "Física aplicada I",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "2. FÍSICA",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -380,12 +453,12 @@ const RAW = [{
     "cursos.nombre": "Programación y Prácticas de Software",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "ESP01",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "1. INGENIERÍA DE SOFTWARE",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -398,10 +471,10 @@ const RAW = [{
     "cursos.nombre": "Fundamentos de seguridad de la información y gobierno",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "2. SISTEMAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP2",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -414,15 +487,15 @@ const RAW = [{
     "semestre": 2,
     "cursos.id": "INS03",
     "cursos.nombre": "Humanismo cristiano",
-    "cursos.creditos": 1,
+    "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Institucional",
+    "cursos.área": "Área Institucional",
     "Componete": "FORMACION HUMANO-CRISTIANA",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAPIns",
-    "Horas de interacción con el docente": 16,
-    "Horas de trabajo Independiente": 32,
-    "Horas de trabajo totales": 48,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 32,
+    "Horas de trabajo Independiente": 64,
+    "Horas de trabajo totales": 96,
     "Obligatorio": "O",
     "Electivo": "",
     "Teórico": "T",
@@ -437,7 +510,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -452,12 +525,12 @@ const RAW = [{
     "cursos.nombre": "Ecuaciones diferenciales",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "B04",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "1. MATEMATICAS",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -470,7 +543,7 @@ const RAW = [{
     "cursos.nombre": "Estadística descriptiva",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "1. MATEMATICAS",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
@@ -488,12 +561,12 @@ const RAW = [{
     "cursos.nombre": "Física aplicada II",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "B06",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "2. FÍSICA",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -506,10 +579,10 @@ const RAW = [{
     "cursos.nombre": "Lectoescritura Investigativa",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "3. INVESTIGACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP5",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -524,12 +597,12 @@ const RAW = [{
     "cursos.nombre": "Desarrollo de Sistemas de Software",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "ESP02",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "1. INGENIERÍA DE SOFTWARE",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -542,10 +615,10 @@ const RAW = [{
     "cursos.nombre": "Gestión de Riesgos y continuidad del negocio",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "2. SISTEMAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP2",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -563,7 +636,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -578,7 +651,7 @@ const RAW = [{
     "cursos.nombre": "Métodos Numéricos",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "B07",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "1. MATEMATICAS",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
@@ -596,7 +669,7 @@ const RAW = [{
     "cursos.nombre": "Estadística inferencial",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "B08",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "1. MATEMATICAS",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
@@ -614,12 +687,12 @@ const RAW = [{
     "cursos.nombre": "Física aplicada III",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "B09",
-    "cursos.área": "Area Basica de Ingeniería",
+    "cursos.área": "Área Básica de Ingeniería",
     "Componete": "2. FÍSICA",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -632,10 +705,10 @@ const RAW = [{
     "cursos.nombre": "Proceso de investigación I",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "3. INVESTIGACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP5",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -650,12 +723,12 @@ const RAW = [{
     "cursos.nombre": "Ingeniería de Software",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "ESP04",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "1. INGENIERÍA DE SOFTWARE",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -668,10 +741,10 @@ const RAW = [{
     "cursos.nombre": "Fundamentos de Bases de Datos",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "2. SISTEMAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -681,15 +754,15 @@ const RAW = [{
     "Práctico": ""
   },
   {
-    "semestre": 4,
+    "semestre": 6,
     "cursos.id": "ESP08",
-    "cursos.nombre": "Fudamentos de Infraestructura TI (Arquitectura de computadores y servidores)",
+    "cursos.nombre": "Fundamentos de Infraestructura TI",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "3. TECNOLOGÍAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP3",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -707,7 +780,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -722,10 +795,10 @@ const RAW = [{
     "cursos.nombre": "Proceso de investigación II",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "B14",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "3. INVESTIGACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP5",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -740,12 +813,12 @@ const RAW = [{
     "cursos.nombre": "Diseño y Arquitectura de Software",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "ESP06",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "1. INGENIERÍA DE SOFTWARE",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -758,12 +831,12 @@ const RAW = [{
     "cursos.nombre": "Fundamentos de Inteligencia Artificial",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "4. INTELIGENCIA ARTIFICIAL",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP4",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -776,10 +849,10 @@ const RAW = [{
     "cursos.nombre": "Profundización Bases de Datos",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "ESP07",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "2. SISTEMAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -794,10 +867,10 @@ const RAW = [{
     "cursos.nombre": "Fundamentos de Analítica de datos",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "2. SISTEMAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP2",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -807,15 +880,15 @@ const RAW = [{
     "Práctico": ""
   },
   {
-    "semestre": 5,
+    "semestre": 7,
     "cursos.id": "ESP13",
-    "cursos.nombre": "Profundización de Infraestructura TI (S.O)",
+    "cursos.nombre": "Profundización de Infraestructura TI",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "ESP08",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "3. TECNOLOGÍAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP3",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -827,13 +900,13 @@ const RAW = [{
   {
     "semestre": 5,
     "cursos.id": "ESP14",
-    "cursos.nombre": "Fundamentos de Computación en la Nube(Cloud, AWS)",
+    "cursos.nombre": "Fundamentos de Computación en la Nube",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "3. TECNOLOGÍAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP3",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -851,7 +924,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -866,7 +939,7 @@ const RAW = [{
     "cursos.nombre": "Constitución y democracia",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "5. EMPRENDIMIENTO (ECONÓMICO-ADMINISTRATIVO)",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
@@ -884,10 +957,10 @@ const RAW = [{
     "cursos.nombre": "Seminario de investigación",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "B15",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "3. INVESTIGACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP5",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -902,12 +975,12 @@ const RAW = [{
     "cursos.nombre": "Ingeniería de software Avanzada",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "ESP09",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "1. INGENIERÍA DE SOFTWARE",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -920,12 +993,12 @@ const RAW = [{
     "cursos.nombre": "Profundización en IA",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "ESP10",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "4. INTELIGENCIA ARTIFICIAL",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP4",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -938,10 +1011,10 @@ const RAW = [{
     "cursos.nombre": "Profundización en Analítica de Datos",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "ESP12",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "2. SISTEMAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP2",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -951,15 +1024,15 @@ const RAW = [{
     "Práctico": ""
   },
   {
-    "semestre": 6,
+    "semestre": 4,
     "cursos.id": "ESP18",
-    "cursos.nombre": "Fundamentos de redes informaticas",
+    "cursos.nombre": "Fundamentos de redes informáticas",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "3. TECNOLOGÍAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP3",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -971,13 +1044,13 @@ const RAW = [{
   {
     "semestre": 6,
     "cursos.id": "ESP19",
-    "cursos.nombre": "Profundización de Computación en la Nube(Cloud, AWS)",
+    "cursos.nombre": "Profundización de Computación en la Nube",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "ESP14",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "3. TECNOLOGÍAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP3",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -995,7 +1068,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1007,10 +1080,10 @@ const RAW = [{
   {
     "semestre": 7,
     "cursos.id": "B18",
-    "cursos.nombre": "Legislacion Laboral",
+    "cursos.nombre": "Legislación Laboral",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "5. EMPRENDIMIENTO (ECONÓMICO-ADMINISTRATIVO)",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
@@ -1028,10 +1101,10 @@ const RAW = [{
     "cursos.nombre": "Trabajo de Grado",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "B17",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "3. INVESTIGACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP5",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1046,12 +1119,12 @@ const RAW = [{
     "cursos.nombre": "Evolución y Operación de Software",
     "cursos.creditos": 3,
     "cursos.prerrequisito": "ESP15",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "1. INGENIERÍA DE SOFTWARE",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
-    "Horas de interacción con el docente": 48,
-    "Horas de trabajo Independiente": 96,
+    "cursos.rap": "RAP6",
+    "Horas de interacción con el docente": 96,
+    "Horas de trabajo Independiente": 48,
     "Horas de trabajo totales": 144,
     "Obligatorio": "O",
     "Electivo": "",
@@ -1064,10 +1137,10 @@ const RAW = [{
     "cursos.nombre": "Ingeniería de Machine Learning",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "ESP16",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "4. INTELIGENCIA ARTIFICIAL",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP4",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1082,10 +1155,10 @@ const RAW = [{
     "cursos.nombre": "Seguridad en infraestructura y sistemas",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "ESP08",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "3. TECNOLOGÍAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP2",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1095,15 +1168,15 @@ const RAW = [{
     "Práctico": ""
   },
   {
-    "semestre": 7,
+    "semestre": 5,
     "cursos.id": "ESP23",
-    "cursos.nombre": "Profundización de Redes informaticas",
+    "cursos.nombre": "Profundización de Redes informáticas",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "ESP18",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "3. TECNOLOGÍAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP3",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1118,10 +1191,10 @@ const RAW = [{
     "cursos.nombre": "Formulación de Proyectos Tecnológicos I+D",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "5. EMPRENDIMIENTO (ECONÓMICO-ADMINISTRATIVO)",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP5",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1139,7 +1212,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1154,7 +1227,7 @@ const RAW = [{
     "cursos.nombre": "Ética Profesional",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area General de Ingeniería",
+    "cursos.área": "Área General de Ingeniería",
     "Componete": "5. EMPRENDIMIENTO (ECONÓMICO-ADMINISTRATIVO)",
     "cursos.color": "#e74c3c",
     "cursos.rap": "RAP6",
@@ -1172,10 +1245,10 @@ const RAW = [{
     "cursos.nombre": "Seguridad en redes y comunicaciones",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "ESP23",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "3. TECNOLOGÍAS DE INFORMACIÓN",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP2",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1190,10 +1263,10 @@ const RAW = [{
     "cursos.nombre": "Estructuración de proyectos de innovación",
     "cursos.creditos": 2,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
+    "cursos.área": "Área Específica",
     "Componete": "5. EMPRENDIMIENTO (ECONÓMICO-ADMINISTRATIVO)",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP5",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1205,13 +1278,13 @@ const RAW = [{
   {
     "semestre": 8,
     "cursos.id": "ESP028",
-    "cursos.nombre": "Practica profesional",
+    "cursos.nombre": "Práctica profesional",
     "cursos.creditos": 6,
     "cursos.prerrequisito": "N/A",
-    "cursos.área": "Area Especifica",
-    "Componete": "Practica profesional",
+    "cursos.área": "Área Específica",
+    "Componete": "Práctica profesional",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "RAP1",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 96,
     "Horas de trabajo Independiente": 192,
     "Horas de trabajo totales": 288,
@@ -1229,7 +1302,7 @@ const RAW = [{
     "cursos.área": "Electivas",
     "Componete": "Componente electivo",
     "cursos.color": "#e74c3c",
-    "cursos.rap": "",
+    "cursos.rap": "RAP6",
     "Horas de interacción con el docente": 32,
     "Horas de trabajo Independiente": 64,
     "Horas de trabajo totales": 96,
@@ -1239,74 +1312,250 @@ const RAW = [{
     "Práctico": ""
   }];
 
+// Variable de trabajo activa (puede provenir de localStorage o de EMBEDDED_DATA)
+let RAW = [];
+let COURSES = [];
+let courseMap = {};
+
+const STORAGE_KEY = 'malla_curricular_data_v2'; // Versión actualizada
+
 const AREA_COLORS = {
-  "Area Basica de Ingeniería": "#d1e3fa",
-  "Area General de Ingeniería": "#d1e3fa",
-  "Area Especifica": "#d1fae5",
-  "Area Institucional": "#fef3c7",
+  "Área Básica de Ingeniería": "#d1e3fa",
+  "Área General de Ingeniería": "#d1e3fa",
+  "Área Específica": "#d1fae5",
+  "Área Institucional": "#fef3c7",
   "Electivas": "#f3f4f6"
 };
 
 const SOLID_COLORS = {
-  "Area Basica de Ingeniería": "#003366",
-  "Area General de Ingeniería": "#003366",
-  "Area Especifica": "#10b981",
-  "Area Institucional": "#f59e0b",
+  "Área Básica de Ingeniería": "#003366",
+  "Área General de Ingeniería": "#003366",
+  "Área Específica": "#10b981",
+  "Área Institucional": "#f59e0b",
   "Electivas": "#64748b"
 };
 
-const COURSES = RAW.map(r => ({
-  id: r["cursos.id"],
-  nombre: r["cursos.nombre"],
-  semestre: parseInt(r.semestre),
-  creditos: r["cursos.creditos"],
-  prereq: r["cursos.prerrequisito"] === "N/A" ? [] : r["cursos.prerrequisito"].split(',').map(x => x.trim()),
-  area: r["cursos.área"],
-  componente: r["Componete"],
-  hta: r["Horas de interacción con el docente"],
-  hti: r["Horas de trabajo Independiente"],
-  // NUEVOS CAMPOS EXTRAÍDOS DEL RAW
-  tipo_obligatoriedad: r["Obligatorio"] === "O" ? "Obligatorio" : "Electivo",
-  tipo_naturaleza: r["Teórico"] === "T" ? "Teórico" : (r["Práctico"] === "P" ? "Práctico" : "Teórico-Práctico")
-}));
+let JSON_LOADED = false;
 
-const courseMap = {};
-COURSES.forEach(c => courseMap[c.id] = c);
+// ============================================================
+// 2. FUNCIONES DE PERSISTENCIA (localStorage)
+// ============================================================
+
+function saveToLocalStorage() {
+  try {
+    const dataToSave = {
+      raw: RAW,
+      timestamp: new Date().toISOString(),
+      count: RAW.length
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    console.log('✅ Datos guardados en localStorage:', RAW.length, 'cursos');
+    return true;
+  } catch (e) {
+    console.error('❌ Error al guardar en localStorage:', e);
+    return false;
+  }
+}
+
+function loadFromLocalStorage() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      console.log('📭 No hay datos en localStorage');
+      return null;
+    }
+    
+    const data = JSON.parse(stored);
+    
+    // Verificar que tenga la estructura correcta
+    if (data && data.raw && Array.isArray(data.raw) && data.raw.length > 0) {
+      console.log('📂 Datos cargados desde localStorage:', data.raw.length, 'cursos');
+      console.log('📅 Guardado:', data.timestamp);
+      return data.raw;
+    }
+    
+    // Compatibilidad con versión anterior (solo array)
+    if (Array.isArray(data) && data.length > 0) {
+      console.log('📂 Datos cargados desde localStorage (formato antiguo):', data.length, 'cursos');
+      return data;
+    }
+    
+    console.log('⚠️ Datos en localStorage con formato inválido');
+    return null;
+  } catch (e) {
+    console.error('❌ Error al cargar desde localStorage:', e);
+    return null;
+  }
+}
+
+function clearLocalStorage() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    console.log('🗑️ Datos eliminados de localStorage');
+    return true;
+  } catch (e) {
+    console.error('❌ Error al eliminar datos:', e);
+    return false;
+  }
+}
+
+// ============================================================
+// 3. FUNCIONES DE PARSEO DE DATOS
+// ============================================================
+
+function parseCoursesFromRAW(rawData) {
+  if (!Array.isArray(rawData)) return [];
+  
+  return rawData.map((r, index) => {
+    try {
+      return {
+        id: String(r["cursos.id"] || r["id"] || r["codigo"] || `CURSO-${index}`).trim(),
+        nombre: String(r["cursos.nombre"] || r["nombre"] || "").trim(),
+        semestre: parseInt(r.semestre) || 0,
+        creditos: parseInt(r["cursos.creditos"] || r["creditos"] || 0),
+        prereq: (r["cursos.prerrequisito"] === "N/A" || !r["cursos.prerrequisito"]) 
+          ? [] 
+          : String(r["cursos.prerrequisito"]).split(',').map(x => x.trim()).filter(Boolean),
+        area: String(r["cursos.área"] || r["area"] || "").trim(),
+        componente: String(r["Componete"] || r["componente"] || "").trim(),
+        hta: parseInt(r["Horas de interacción con el docente"] || r["hta"] || 0),
+        hti: parseInt(r["Horas de trabajo Independiente"] || r["hti"] || 0),
+        tipo_obligatoriedad: (r["Obligatorio"] === "O" || r["obligatorio"] === "O") ? "Obligatorio" : "Electivo",
+        tipo_naturaleza: r["Teórico"] === "T" ? "Teórico" : (r["Práctico"] === "P" ? "Práctico" : "Teórico-Práctico")
+      };
+    } catch (e) {
+      console.warn('Error procesando curso:', r, e);
+      return null;
+    }
+  }).filter(c => c && c.id && c.nombre);
+}
+
+function buildCourseMap(courses) {
+  const map = {};
+  courses.forEach(c => {
+    if (c && c.id) map[c.id] = c;
+  });
+  return map;
+}
+
+// ============================================================
+// 4. FUNCIÓN PRINCIPAL DE CARGA DE DATOS
+// ============================================================
+
+function loadData(rawData) {
+  if (!Array.isArray(rawData) || rawData.length === 0) {
+    console.warn('⚠️ Datos vacíos o inválidos');
+    return false;
+  }
+
+  RAW = rawData;
+  COURSES = parseCoursesFromRAW(rawData);
+  courseMap = buildCourseMap(COURSES);
+  JSON_LOADED = true;
+  
+  console.log('📊 Datos cargados:', {
+    total: COURSES.length,
+    semestres: [...new Set(COURSES.map(c => c.semestre))].sort(),
+    areas: [...new Set(COURSES.map(c => c.area))]
+  });
+  
+  // Guardar en localStorage
+  const saved = saveToLocalStorage();
+  if (saved) {
+    console.log('💾 Datos persistidos correctamente');
+  }
+  
+  return true;
+}
+
+// ============================================================
+// 5. INICIALIZACIÓN DE LA INTERFAZ
+// ============================================================
 
 function init() {
+  console.log('🚀 Iniciando aplicación...');
+  
+  // 1. Intentar cargar datos guardados en localStorage (preferencias/ediciones de este navegador)
+  const storedData = loadFromLocalStorage();
+  if (storedData) {
+    const success = loadData(storedData);
+    if (success) {
+      setStatus(`📂 Datos cargados automáticamente: ${COURSES.length} cursos`, 'info');
+      renderGrid();
+      return;
+    }
+  }
+  
+  // 2. Si no hay datos en localStorage (p. ej. otro navegador u otro dispositivo),
+  //    usar los datos incrustados directamente en el código fuente.
+  if (Array.isArray(EMBEDDED_DATA) && EMBEDDED_DATA.length > 0) {
+    const success = loadData(EMBEDDED_DATA);
+    if (success) {
+      console.log('📦 Datos incrustados cargados:', COURSES.length, 'cursos');
+      renderGrid();
+      return;
+    }
+  }
+  
+  // 3. Si tampoco hay datos incrustados válidos, mostrar estado vacío
+  console.log('ℹ️ No hay datos disponibles, mostrando estado vacío');
+  renderGrid();
+}
+
+function renderGrid() {
   const grid = document.getElementById('grid');
-  grid.innerHTML = ''; 
+  if (!grid) return;
+  
+  grid.innerHTML = '';
+
+  if (COURSES.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">📂</div>
+        <div>No hay datos cargados</div>
+        <div class="sub">No se encontraron datos válidos de la malla curricular.</div>
+        <div class="sub" style="margin-top:20px; font-size:12px; color:#aaa;">
+          Los datos se guardan automáticamente en el navegador<br>
+          <span style="color:#666;">(persisten incluso después de cerrar la página)</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
 
   const areasOrdenadas = [
-    "Area Basica de Ingeniería",
-	"Area General de Ingeniería",
-    "Area Especifica",
-    "Area Institucional",
+    "Área Básica de Ingeniería",
+    "Área General de Ingeniería",
+    "Área Específica",
+    "Área Institucional",
     "Electivas"
   ];
 
-  for(let s=1; s<=8; s++) {
+  // Cabeceras de semestre
+  for (let s = 1; s <= 8; s++) {
     const semCursos = COURSES.filter(c => c.semestre === s);
-    const totalCr = semCursos.reduce((a,b) => a + b.creditos, 0);
+    const totalCr = semCursos.reduce((a, b) => a + (b.creditos || 0), 0);
     const div = document.createElement('div');
     div.className = 'sem-header';
     div.innerHTML = `Semestre ${s} <span>${semCursos.length} Cursos | ${totalCr} Créditos</span>`;
     grid.appendChild(div);
   }
 
+  // Filas por área y componente
   areasOrdenadas.forEach(areaName => {
-    const componentesEnArea = [...new Set(
-      COURSES.filter(c => c.area === areaName).map(c => c.componente)
-    )].sort();
+    const cursosEnArea = COURSES.filter(c => c.area === areaName);
+    const componentesEnArea = [...new Set(cursosEnArea.map(c => c.componente))].filter(Boolean).sort();
+
+    if (componentesEnArea.length === 0) return;
 
     componentesEnArea.forEach(comp => {
       const label = document.createElement('div');
       label.className = 'component-label';
-      label.style.borderLeft = `5px solid ${SOLID_COLORS[areaName]}`;
+      label.style.borderLeft = `5px solid ${SOLID_COLORS[areaName] || '#ccc'}`;
       label.innerHTML = `<span style="opacity:0.6; font-size:9px;">${areaName.toUpperCase()}</span><br>${comp.toUpperCase()}`;
       grid.appendChild(label);
 
-      for(let s=1; s<=8; s++) {
+      for (let s = 1; s <= 8; s++) {
         const cell = document.createElement('div');
         cell.className = 'semester-cell';
         
@@ -1322,7 +1571,13 @@ function init() {
           card.id = `card-${c.id}`;
           card.style.backgroundColor = AREA_COLORS[c.area] || '#fff';
           card.style.setProperty('--area-color', SOLID_COLORS[c.area] || '#ccc');
-          card.innerHTML = `<div class="card-id"><span>${c.id}</span> <b>${c.creditos} CR</b></div><div class="card-name">${c.nombre}</div>`;
+          card.innerHTML = `
+            <div class="card-id">
+              <span>${c.id}</span> 
+              <b>${c.creditos || 0} CR</b>
+            </div>
+            <div class="card-name">${c.nombre}</div>
+          `;
           card.onmouseenter = () => highlight(c.id);
           card.onmouseleave = resetHighlight;
           card.onclick = () => showDetails(c.id);
@@ -1336,9 +1591,11 @@ function init() {
   setTimeout(drawLines, 600);
 }
 
-// FUNCIÓN DE FILTRO CON EFECTO ACORDEÓN
+// ============================================================
+// 6. FUNCIONES DE FILTRADO Y NAVEGACIÓN
+// ============================================================
+
 function filterByArea(area, btn) {
-  // Manejo de botones activos
   document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 
@@ -1346,33 +1603,42 @@ function filterByArea(area, btn) {
   const cells = document.querySelectorAll('.semester-cell');
 
   labels.forEach((label, index) => {
-    // Obtenemos el nombre del área del span interno
-    const currentAreaName = label.querySelector('span').innerText;
+    const span = label.querySelector('span');
+    if (!span) return;
+    const currentAreaName = span.innerText.trim();
     
-    // Si el filtro es "all" o coincide con el área del botón
     const matches = (area === 'all' || currentAreaName === area.toUpperCase());
 
-    if(matches) {
-        label.classList.remove('hidden-row');
-        // Mostrar las 8 celdas de semestre correspondientes a esta fila
-        for(let i=0; i<8; i++){
-            cells[index * 8 + i].classList.remove('hidden-row');
-        }
+    if (matches) {
+      label.classList.remove('hidden-row');
+      for (let i = 0; i < 8; i++) {
+        if (cells[index * 8 + i]) cells[index * 8 + i].classList.remove('hidden-row');
+      }
     } else {
-        label.classList.add('hidden-row');
-        for(let i=0; i<8; i++){
-            cells[index * 8 + i].classList.add('hidden-row');
-        }
+      label.classList.add('hidden-row');
+      for (let i = 0; i < 8; i++) {
+        if (cells[index * 8 + i]) cells[index * 8 + i].classList.add('hidden-row');
+      }
     }
   });
 
-  // Re-dibujar líneas después de que el DOM se asiente
   setTimeout(drawLines, 300);
 }
 
+// ============================================================
+// 7. FUNCIONES DE VISUALIZACIÓN (Modal, Resaltado, Líneas)
+// ============================================================
+
 function showDetails(id) {
   const c = courseMap[id];
-  const prereqText = c.prereq.map(p => courseMap[p]?.nombre || p).join(', ') || 'Sin prerrequisitos';
+  if (!c) {
+    console.warn('Curso no encontrado:', id);
+    return;
+  }
+  
+  const prereqText = c.prereq && c.prereq.length > 0
+    ? c.prereq.map(p => courseMap[p]?.nombre || p).join(', ')
+    : 'Sin prerrequisitos';
   
   document.getElementById('m-title').innerText = c.nombre;
   document.getElementById('m-body').innerHTML = `
@@ -1381,8 +1647,8 @@ function showDetails(id) {
       <div><b>Semestre:</b> ${c.semestre}</div>
       <div><b>Créditos:</b> ${c.creditos}</div>
       <div><b>Área:</b> ${c.area}</div>
-      <div><b>Carácter:</b> ${c.tipo_obligatoriedad}</div>
-      <div><b>Naturaleza:</b> ${c.tipo_naturaleza}</div>
+      <div><b>Carácter:</b> ${c.tipo_obligatoriedad || 'N/A'}</div>
+      <div><b>Naturaleza:</b> ${c.tipo_naturaleza || 'N/A'}</div>
     </div>
     
     <div class="prereq-badge">
@@ -1391,53 +1657,86 @@ function showDetails(id) {
     
     <div class="info-box">
        <b>Distribución de Horas:</b><br>
-       Docente: ${c.hta}h | Independiente: ${c.hti}h | Total: ${c.hta + c.hti}h
+       Docente: ${c.hta || 0}h | Independiente: ${c.hti || 0}h | Total: ${(c.hta || 0) + (c.hti || 0)}h
     </div>
   `;
   document.getElementById('overlay').style.display = 'block';
 }
 
+function closeModal() { 
+  document.getElementById('overlay').style.display = 'none'; 
+}
+
 function showResumen() {
+  if (COURSES.length === 0) {
+    setStatus('⚠️ No hay datos cargados. Cargue un archivo JSON primero.', 'err');
+    return;
+  }
+
   const statsSem = {};
   const statsArea = {};
-  let totalN = 0; let totalCr = 0;
+  let totalN = 0; 
+  let totalCr = 0;
 
   COURSES.forEach(c => {
-    if(!statsSem[c.semestre]) statsSem[c.semestre] = { n: 0, cr: 0 };
-    statsSem[c.semestre].n++; statsSem[c.semestre].cr += c.creditos;
-    if(!statsArea[c.area]) statsArea[c.area] = { n: 0, cr: 0 };
-    statsArea[c.area].n++; statsArea[c.area].cr += c.creditos;
-    totalN++; totalCr += c.creditos;
+    if (!statsSem[c.semestre]) statsSem[c.semestre] = { n: 0, cr: 0 };
+    statsSem[c.semestre].n++; 
+    statsSem[c.semestre].cr += c.creditos || 0;
+    
+    if (!statsArea[c.area]) statsArea[c.area] = { n: 0, cr: 0 };
+    statsArea[c.area].n++; 
+    statsArea[c.area].cr += c.creditos || 0;
+    
+    totalN++; 
+    totalCr += c.creditos || 0;
   });
 
   let html = `<h3>Por Áreas Académicas</h3><table><tr><th>Área</th><th>Cursos</th><th>CR</th></tr>`;
-  for(let a in statsArea) html += `<tr><td>${a}</td><td>${statsArea[a].n}</td><td>${statsArea[a].cr}</td></tr>`;
+  for (let a in statsArea) {
+    html += `<tr><td>${a}</td><td>${statsArea[a].n}</td><td>${statsArea[a].cr}</td></tr>`;
+  }
   html += `<tr style="font-weight:bold; background:#f0f0f0"><td>TOTAL</td><td>${totalN}</td><td>${totalCr}</td></tr></table>`;
 
   html += `<h3 style="margin-top:20px">Por Semestres</h3><table><tr><th>Semestre</th><th>Cursos</th><th>CR</th></tr>`;
-  for(let s=1; s<=8; s++) html += `<tr><td>Semestre ${s}</td><td>${statsSem[s]?.n || 0}</td><td>${statsSem[s]?.cr || 0}</td></tr>`;
+  for (let s = 1; s <= 8; s++) {
+    html += `<tr><td>Semestre ${s}</td><td>${statsSem[s]?.n || 0}</td><td>${statsSem[s]?.cr || 0}</td></tr>`;
+  }
   html += `<tr style="font-weight:bold; background:#f0f0f0"><td>TOTAL</td><td>${totalN}</td><td>${totalCr}</td></tr></table>`;
 
-  document.getElementById('m-title').innerText = "Análisis Curricular";
+  document.getElementById('m-title').innerText = "📊 Análisis Curricular";
   document.getElementById('m-body').innerHTML = html;
   document.getElementById('overlay').style.display = 'block';
 }
 
-function closeModal() { document.getElementById('overlay').style.display = 'none'; }
-
 function highlight(id) {
-  const pre = []; const getP = (cid) => courseMap[cid]?.prereq.forEach(p => { if(!pre.includes(p)){ pre.push(p); getP(p); } });
+  if (!courseMap[id]) return;
+  
+  const pre = []; 
+  const getP = (cid) => {
+    if (courseMap[cid]?.prereq) {
+      courseMap[cid].prereq.forEach(p => { 
+        if (!pre.includes(p)) { 
+          pre.push(p); 
+          getP(p); 
+        } 
+      });
+    }
+  };
   getP(id);
-  const suc = COURSES.filter(c => c.prereq.includes(id)).map(c => c.id);
+  
+  const suc = COURSES.filter(c => c.prereq && c.prereq.includes(id)).map(c => c.id);
 
   document.querySelectorAll('.card').forEach(card => {
-    const cid = card.id.replace('card-','');
-    if(cid !== id && !pre.includes(cid) && !suc.includes(cid)) card.classList.add('dimmed');
-    if(cid === id) card.classList.add('active-focus');
+    const cid = card.id.replace('card-', '');
+    if (cid !== id && !pre.includes(cid) && !suc.includes(cid)) {
+      card.classList.add('dimmed');
+    }
+    if (cid === id) card.classList.add('active-focus');
   });
+  
   document.querySelectorAll('.line').forEach(l => {
-    if(l.dataset.to === id) l.classList.add('pre');
-    if(l.dataset.from === id) l.classList.add('suc');
+    if (l.dataset.to === id) l.classList.add('pre');
+    if (l.dataset.from === id) l.classList.add('suc');
   });
 }
 
@@ -1449,38 +1748,335 @@ function resetHighlight() {
 function drawLines() {
   const svg = document.getElementById('svg-canvas');
   const wrapper = document.getElementById('wrapper');
-  svg.setAttribute('width', wrapper.scrollWidth);
-  svg.setAttribute('height', wrapper.scrollHeight);
+  
+  if (!svg || !wrapper) return;
+  
+  svg.setAttribute('width', wrapper.scrollWidth || 800);
+  svg.setAttribute('height', wrapper.scrollHeight || 600);
   svg.innerHTML = '';
 
+  if (COURSES.length === 0) return;
+
   COURSES.forEach(c => {
+    if (!c.prereq || c.prereq.length === 0) return;
+    
     c.prereq.forEach(pId => {
       const from = document.getElementById(`card-${pId}`);
       const to = document.getElementById(`card-${c.id}`);
       
-      // Solo dibujar si ambos elementos existen y son visibles
-      if(from && to && from.offsetParent !== null && to.offsetParent !== null) {
-        const rF = from.getBoundingClientRect(); const rT = to.getBoundingClientRect();
-        const oT = wrapper.getBoundingClientRect().top; const oL = wrapper.getBoundingClientRect().left;
-        const sL = window.scrollX; const sT = window.scrollY;
+      if (from && to && from.offsetParent !== null && to.offsetParent !== null) {
+        try {
+          const rF = from.getBoundingClientRect(); 
+          const rT = to.getBoundingClientRect();
+          const oT = wrapper.getBoundingClientRect().top; 
+          const oL = wrapper.getBoundingClientRect().left;
+          const sL = window.scrollX; 
+          const sT = window.scrollY;
 
-        const x1 = rF.right - oL + sL; const y1 = rF.top - oT + sT + rF.height/2;
-        const x2 = rT.left - oL + sL; const y2 = rT.top - oT + sT + rT.height/2;
+          const x1 = rF.right - oL + sL; 
+          const y1 = rF.top - oT + sT + rF.height/2;
+          const x2 = rT.left - oL + sL; 
+          const y2 = rT.top - oT + sT + rT.height/2;
 
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        const cp = (x1 + x2) / 2;
-        path.setAttribute("d", `M ${x1} ${y1} C ${cp} ${y1}, ${cp} ${y2}, ${x2} ${y2}`);
-        path.setAttribute("class", "line");
-        path.dataset.from = pId; path.dataset.to = c.id;
-        svg.appendChild(path);
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          const cp = (x1 + x2) / 2;
+          path.setAttribute("d", `M ${x1} ${y1} C ${cp} ${y1}, ${cp} ${y2}, ${x2} ${y2}`);
+          path.setAttribute("class", "line");
+          path.dataset.from = pId; 
+          path.dataset.to = c.id;
+          svg.appendChild(path);
+        } catch (e) {
+          // Ignorar errores de dibujo
+        }
       }
     });
   });
 }
 
-window.onresize = drawLines;
-window.onscroll = drawLines;
-init();
+// ============================================================
+// 8. CARGA DE ARCHIVO JSON
+// ============================================================
+
+function setStatus(msg, type) {
+  const el = document.getElementById('json-status');
+  if (!el) return;
+  
+  el.textContent = msg;
+  el.className = type;
+  el.style.display = 'block';
+  
+  // Auto-ocultar después de 6 segundos (excepto errores)
+  if (type !== 'err') {
+    setTimeout(() => { 
+      if (el) el.style.display = 'none'; 
+    }, 6000);
+  }
+}
+
+// ============================================================
+// 9. LIMPIAR DATOS
+// ============================================================
+
+function clearData() {
+  if (COURSES.length === 0) {
+    setStatus('ℹ️ No hay datos para limpiar', 'info');
+    return;
+  }
+  
+  if (confirm('¿Está seguro de que desea eliminar todos los datos cargados?\n\nEsta acción no se puede deshacer.')) {
+    RAW = [];
+    COURSES = [];
+    courseMap = {};
+    JSON_LOADED = false;
+    clearLocalStorage();
+    renderGrid();
+    setStatus('🗑️ Datos eliminados correctamente', 'info');
+  }
+}
+
+// ============================================================
+// 10. GENERACIÓN DE PDF (simplificada para este ejemplo)
+// ============================================================
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; 
+    s.onload = res; 
+    s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function generatePDF() {
+  if (COURSES.length === 0) {
+    setStatus('⚠️ Debe cargar un archivo JSON con la malla curricular antes de generar el PDF.', 'err');
+    return;
+  }
+
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+  } catch(e) {
+    setStatus('❌ No se pudo cargar la librería PDF. Verifique su conexión.', 'err'); 
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+
+  const AREA_PDF_COLORS = {
+    "Área Básica de Ingeniería":   { bg: [74, 111, 165],  text: [255,255,255] },
+    "Área General de Ingeniería":  { bg: [74, 111, 165],  text: [255,255,255] },
+    "Área Específica":             { bg: [39, 174, 96],   text: [255,255,255] },
+    "Área Institucional":          { bg: [192, 144, 0],   text: [255,255,255] },
+    "Electivas":                   { bg: [100, 116, 139], text: [255,255,255] }
+  };
+
+  const semestres = [...new Set(COURSES.map(c => c.semestre))].sort((a,b)=>a-b);
+  const totalCursos = COURSES.length;
+  const totalCreditos = COURSES.reduce((a,c) => a + (c.creditos || 0), 0);
+  const totalSemestres = semestres.length;
+  const totalComponentes = [...new Set(COURSES.map(c => c.componente))].filter(Boolean).length;
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const PW = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+
+  // Página 1 - Malla
+  doc.setFillColor(0, 51, 102);
+  doc.rect(0, 0, PW, 18, 'F');
+  doc.setFontSize(7); doc.setTextColor(200, 200, 200);
+  doc.text('Malla Curricular — Ingeniería de Sistemas  ·  Distribución por semestres con código, metodología, créditos y prerrequisito', 8, 5);
+  doc.setFontSize(13); doc.setFont(undefined, 'bold'); doc.setTextColor(255,255,255);
+  doc.text('Propuesta Malla Curricular — Ingeniería De Sistemas Universidad Mariana', PW/2, 12, { align: 'center' });
+  doc.setFont(undefined, 'normal'); doc.setFontSize(8); doc.setTextColor(255, 204, 0);
+  doc.text(`${totalCursos} cursos  ·  ${totalCreditos} créditos  ·  ${totalSemestres} semestres  ·  ${totalComponentes} componentes de formación`, PW/2, 17, { align: 'center' });
+
+  const colW = (PW - 16) / Math.max(semestres.length, 8);
+  const rowH = 6;
+  let curY = 22;
+
+  semestres.forEach((s, i) => {
+    const x = 8 + i * colW;
+    const semCursos = COURSES.filter(c => c.semestre === s);
+    const semCr = semCursos.reduce((a,c) => a + (c.creditos || 0), 0);
+    doc.setFillColor(0, 51, 102);
+    doc.roundedRect(x + 1, curY, colW - 2, 9, 1, 1, 'F');
+    doc.setFontSize(7); doc.setFont(undefined, 'bold'); doc.setTextColor(255,255,255);
+    doc.text(`Semestre ${s}`, x + colW/2, curY + 4.5, { align: 'center' });
+    doc.setFontSize(5.5); doc.setFont(undefined, 'normal'); doc.setTextColor(255,204,0);
+    doc.text(`${semCursos.length} cursos | ${semCr} créditos`, x + colW/2, curY + 8, { align: 'center' });
+  });
+  curY += 12;
+
+  const areasOrdenadas = ["Área Básica de Ingeniería","Área General de Ingeniería","Área Específica","Área Institucional","Electivas"];
+  areasOrdenadas.forEach(areaName => {
+    const cursosArea = COURSES.filter(c => c.area === areaName);
+    const componentes = [...new Set(cursosArea.map(c => c.componente))].filter(Boolean).sort();
+    
+    componentes.forEach(comp => {
+      if (curY > PH - 20) { doc.addPage(); curY = 10; }
+
+      const aCol = AREA_PDF_COLORS[areaName] || { bg:[100,100,100], text:[255,255,255] };
+      doc.setFillColor(...aCol.bg);
+      doc.rect(8, curY, PW - 16, rowH - 1, 'F');
+      doc.setFontSize(5.5); doc.setFont(undefined, 'bold'); doc.setTextColor(...aCol.text);
+      doc.text(areaName.toUpperCase(), 11, curY + 2.2);
+      doc.setFontSize(6); doc.setTextColor(...aCol.text);
+      doc.text(comp.toUpperCase(), 11, curY + 4.8);
+      curY += rowH;
+
+      const maxCardsInRow = Math.max(...semestres.map(s =>
+        COURSES.filter(c => c.area === areaName && c.componente === comp && c.semestre === s).length
+      ));
+      const cardH = Math.max(10, maxCardsInRow * 11);
+
+      semestres.forEach((s, i) => {
+        const x = 8 + i * colW;
+        const cursos = COURSES.filter(c => c.area === areaName && c.componente === comp && c.semestre === s);
+        cursos.forEach((c, ci) => {
+          const cardY = curY + ci * 11;
+          doc.setFillColor(255,255,255);
+          doc.setDrawColor(220,220,220);
+          doc.roundedRect(x + 1, cardY, colW - 2, 10, 1, 1, 'FD');
+          doc.setFillColor(0, 51, 102);
+          doc.rect(x + 1, cardY, 2, 10, 'F');
+          doc.setFontSize(5); doc.setFont(undefined, 'bold'); doc.setTextColor(50,50,50);
+          doc.text(c.id, x + 4, cardY + 3.2);
+          doc.setTextColor(100,100,100);
+          doc.text(`${c.creditos || 0}CR`, x + colW - 4, cardY + 3.2, { align: 'right' });
+          doc.setFontSize(5); doc.setFont(undefined, 'normal'); doc.setTextColor(30,30,30);
+          const lines = doc.splitTextToSize(c.nombre, colW - 7);
+          doc.text(lines.slice(0,2), x + 4, cardY + 6.5);
+        });
+      });
+
+      curY += cardH + 2;
+    });
+  });
+
+  // Página 2 - Tabla detallada
+  doc.addPage();
+  doc.setFillColor(0, 51, 102);
+  doc.rect(0, 0, PW, 14, 'F');
+  doc.setFontSize(11); doc.setFont(undefined, 'bold'); doc.setTextColor(255,255,255);
+  doc.text('Detalle Completo de Cursos — Malla Curricular', PW/2, 9, { align: 'center' });
+
+  const tableRows = COURSES.map(c => [
+    c.semestre, c.id, c.nombre, c.area.replace('Area ',''), c.componente,
+    c.creditos || 0, (c.tipo_naturaleza || '')[0] || '-', 
+    (c.prereq || []).join(', ') || '-',
+    c.hta || 0, c.hti || 0, (c.hta || 0) + (c.hti || 0)
+  ]);
+
+  doc.autoTable({
+    startY: 17,
+    head: [['Sem','Código','Nombre del Curso','Área','Componente','CR','Nat.','Prerreq.','H.Doc','H.Ind','H.Tot']],
+    body: tableRows,
+    styles: { fontSize: 5.5, cellPadding: 1.5, overflow: 'linebreak' },
+    headStyles: { fillColor: [0,51,102], textColor: 255, fontStyle: 'bold', fontSize: 6 },
+    columnStyles: {
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 15, fontStyle: 'bold' },
+      2: { cellWidth: 62 },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 40 },
+      5: { cellWidth: 8,  halign: 'center' },
+      6: { cellWidth: 8,  halign: 'center' },
+      7: { cellWidth: 20 },
+      8: { cellWidth: 12, halign: 'center' },
+      9: { cellWidth: 12, halign: 'center' },
+      10:{ cellWidth: 12, halign: 'center' }
+    },
+    alternateRowStyles: { fillColor: [245, 248, 252] },
+    didParseCell: function(data) {
+      if (data.section === 'body') {
+        const areaName = COURSES[data.row.index]?.area;
+        const col = AREA_PDF_COLORS[areaName];
+        if (data.column.index === 3 && col) {
+          data.cell.styles.fillColor = col.bg;
+          data.cell.styles.textColor = col.text;
+        }
+      }
+    }
+  });
+
+  // Página 3 - Resumen
+  doc.addPage();
+  doc.setFillColor(0,51,102); doc.rect(0,0,PW,14,'F');
+  doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.setTextColor(255,255,255);
+  doc.text('Análisis Curricular — Resumen Estadístico', PW/2, 9, { align:'center' });
+
+  const semRows = semestres.map(s => {
+    const cs = COURSES.filter(c => c.semestre === s);
+    const cr = cs.reduce((a,c) => a + (c.creditos || 0), 0);
+    const hTot = cs.reduce((a,c) => a + (c.hta || 0) + (c.hti || 0), 0);
+    return [s, cs.length, cr, hTot];
+  });
+  semRows.push(['TOTAL', totalCursos, totalCreditos, COURSES.reduce((a,c) => a + (c.hta || 0) + (c.hti || 0), 0)]);
+
+  doc.autoTable({
+    startY: 18,
+    head: [['Semestre','N° Cursos','Créditos','Horas Totales']],
+    body: semRows,
+    styles: { fontSize: 8, cellPadding: 2.5, halign: 'center' },
+    headStyles: { fillColor:[0,51,102], textColor:255, fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[245,248,252] },
+    didParseCell: d => { if(d.row.index === semRows.length-1) d.cell.styles.fontStyle = 'bold'; },
+    tableWidth: 100, margin: { left: 8 }
+  });
+
+  const areas = [...new Set(COURSES.map(c => c.area))].filter(Boolean);
+  const areaRows = areas.map(a => {
+    const cs = COURSES.filter(c => c.area === a);
+    const cr = cs.reduce((s,c) => s + (c.creditos || 0), 0);
+    return [a, cs.length, cr];
+  });
+  areaRows.push(['TOTAL', totalCursos, totalCreditos]);
+
+  doc.autoTable({
+    startY: 18,
+    head: [['Área Académica','N° Cursos','Créditos']],
+    body: areaRows,
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    headStyles: { fillColor:[0,51,102], textColor:255, fontStyle:'bold' },
+    alternateRowStyles: { fillColor:[245,248,252] },
+    didParseCell: d => { if(d.row.index === areaRows.length-1) d.cell.styles.fontStyle = 'bold'; },
+    tableWidth: 120, margin: { left: 130 }
+  });
+
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFontSize(6); doc.setFont(undefined,'normal'); doc.setTextColor(150,150,150);
+    doc.text(`Página ${p} de ${pageCount}`, PW - 10, PH - 4, { align: 'right' });
+    doc.text('Universidad Mariana — Propuesta Malla Curricular Ingeniería de Sistemas', 10, PH - 4);
+  }
+
+  doc.save('Malla_Curricular_UMIS.pdf');
+  setStatus('✅ PDF generado y descargado correctamente.', 'ok');
+}
+
+// ============================================================
+// 11. EVENTOS Y ARRANQUE
+// ============================================================
+
+// Inicialización única al cargar el DOM
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('📄 DOM cargado, inicializando...');
+  init();
+});
+
+window.onresize = function() {
+  drawLines();
+};
+
+window.onscroll = function() {
+  drawLines();
+};
+
+console.log('📝 Aplicación cargada. Los datos se guardan automáticamente en localStorage.');
 </script>
 </body>
 </html>
